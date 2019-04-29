@@ -131,19 +131,19 @@ model_string = textConnection("model{
   # Likelihood
   for (i in 1:n) {
     Y[i] ~ dcat(pi[i,])
-    for (j in 1:5) {
+    for (j in 1:3) {
       logit(pi[i,j]) <- alpha[j] + inprod(beta[j,], X[i,])
     }
   }
   # Prediction
   for (i in 1:n_pred) {
     Y_pred[i] ~ dcat(pi_pred[i,])
-    for (j in 1:5) {
+    for (j in 1:3) {
       logit(pi_pred[i,j]) <- alpha[j] + inprod(beta[j,], X_pred[i,])
     }
   }
   # Priors
-  for (j in 1:5) {
+  for (j in 1:3) {
     alpha[j] ~ ddexp(0, taua)
     for (k in 1:p) {
       beta[j,k] ~ ddexp(0, taub)
@@ -163,6 +163,6 @@ summary(samples)
 gelman.diag(samples)
 effectiveSize(samples)
 
-res <- c(summary(samples)$quantiles[1:966,3] == as.numeric(Y.letter.recognition.test))
+res <- c(summary(samples)$quantiles[1:250,3] == as.numeric(Y.letter.recognition.test))
 print(paste("Accuracy:", length(subset(res, res==T)) / length(res)))
 
