@@ -12,8 +12,19 @@ library(caret)
 # Separating data into response and covariates.
 
 # Letter Recognition (16 total covariates; discrete)
+# Reducing size of letter recognition dataset, dropping unused levels, resetting index
+letter.recognition <- letter.recognition[which (letter.recognition$V1 == "A" |
+                                                letter.recognition$V1 == "B" |
+                                                letter.recognition$V1 == "C"),]
+letter.recognition$V1 <- droplevels(letter.recognition$V1)
+letter.recognition <- letter.recognition[sample(nrow(letter.recognition)), ]
+letter.recognition <- letter.recognition[1:1000, ]
+rownames(letter.recognition) <- NULL
+
+
 Y.letter.recognition <- letter.recognition[,1]
 X.letter.recognition <- letter.recognition[,2:17]
+
 
 # Iris (4 total covariates; continuous)
 Y.iris <- iris[,5]
@@ -46,7 +57,7 @@ X.iris.train <- X.iris[iris.train.ind,]
 Y.iris.test <- Y.iris[-iris.train.ind]
 X.iris.test <- X.iris[-iris.train.ind,]
 
-nb.iris <- naive_bayes(X.iris.train, Y.iris.train, prior=)
+nb.iris <- naive_bayes(X.iris.train, Y.iris.train)
 preds.iris <- predict(nb.iris, X.iris.test)
 iris.confusion.matrix <- confusionMatrix(preds.iris, Y.iris.test)
 
@@ -120,19 +131,19 @@ model_string = textConnection("model{
   # Likelihood
   for (i in 1:n) {
     Y[i] ~ dcat(pi[i,])
-    for (j in 1:26) {
+    for (j in 1:5) {
       logit(pi[i,j]) <- alpha[j] + inprod(beta[j,], X[i,])
     }
   }
   # Prediction
   for (i in 1:n_pred) {
     Y_pred[i] ~ dcat(pi_pred[i,])
-    for (j in 1:26) {
+    for (j in 1:5) {
       logit(pi_pred[i,j]) <- alpha[j] + inprod(beta[j,], X_pred[i,])
     }
   }
   # Priors
-  for (j in 1:26) {
+  for (j in 1:5) {
     alpha[j] ~ ddexp(0, taua)
     for (k in 1:p) {
       beta[j,k] ~ ddexp(0, taub)
@@ -152,7 +163,6 @@ summary(samples)
 gelman.diag(samples)
 effectiveSize(samples)
 
-result <- samples[[1]]
-result[1:38]
-summary(samples)$quantiles[1:38,3] == as.numeric(Y.iris.test)
+res <- c(summary(samples)$quantiles[1:966,3] == as.numeric(Y.letter.recognition.test))
+print(paste("Accuracy:", length(subset(res, res==T)) / length(res)))
 
