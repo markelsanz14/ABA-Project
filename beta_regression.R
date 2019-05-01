@@ -23,7 +23,7 @@ X.iris <- scale(iris[,1:4])
 
 accuracies.iris.nb <- rep(0, 10)
 accuracies.iris.jags <- rep(0, 10)
-for (cv in 1:10) {
+for (cv in 4:10) {
   val.start.ind <- (cv-1)*15 + 1
   Y.iris.test <- Y.iris[val.start.ind:(val.start.ind+14)]
   X.iris.test <- X.iris[val.start.ind:(val.start.ind+14), ]
@@ -48,32 +48,34 @@ for (cv in 1:10) {
   n.chains <- 2
   
   model_string = textConnection("model{
-    # Likelihood
-    for (i in 1:n) {
-      Y[i] ~ dcat(pi[i,])
-      for (j in 1:3) {
-        logit(pi[i,j]) <- alpha[j] + inprod(beta[j,], X[i,])
-      }
-    }
-
-    # Prediction
-    for (i in 1:n_pred) {
-      Y_pred[i] ~ dcat(pi_pred[i,])
-      logit(pi_pred[i,1]) <- alpha[1] + inprod(beta[1,], X_pred[i,])
-      logit(pi_pred[i,2]) <- alpha[2] + inprod(beta[2,], X_pred[i,])
-      logit(pi_pred[i,3]) <- alpha[3] + inprod(beta[3,], X_pred[i,])
-    }
-    # Priors
+  # Likelihood
+  for (i in 1:n) {
+    Y[i] ~ dcat(q[i,])
     for (j in 1:3) {
-      alpha[j] ~ ddexp(0, taua)
-      for (k in 1:p) {
-        beta[j,k] ~ ddexp(0, taub)
-      }
+      q[i,j] ~ dbeta(r*pi[i,j], r*(1-pi[i,j])) T(0.001, 0.999)
+      logit(pi[i,j]) <- alpha[j] + inprod(beta[j,], X[i,])
     }
-    #mua ~ dnorm(0, 0.001)
-    #mub ~ dnorm(0, 0.001)
-    taua ~ dgamma(0.1, 0.1)
-    taub ~ dgamma(0.1, 0.1)
+  }
+  # Prediction
+  for (i in 1:n_pred) {
+    Y_pred[i] ~ dcat(q_pred[i,])
+    for (j in 1:3) {
+      q_pred[i,j] ~ dbeta(r*pi_pred[i,j], r*(1-pi_pred[i,j])) T(0.001, 0.999)
+      logit(pi_pred[i,j]) <- alpha[j] + inprod(beta[j,], X_pred[i,])
+    }
+  }
+  # Priors
+  for (j in 1:3) {
+    alpha[j] ~ dnorm(mua, taua)
+    for (k in 1:p) {
+      beta[j,k] ~ dnorm(mub, taub)
+    }
+  }
+  r ~ dgamma(0.1, 0.1)
+  mua ~ dnorm(0, 0.001)
+  mub ~ dnorm(0, 0.001)
+  taua ~ dgamma(0.1, 0.1)
+  taub ~ dgamma(0.1, 0.1)
 }")
   
   model <- jags.model(model_string, data=data, n.chains=n.chains, quiet=T)
@@ -89,7 +91,7 @@ for (cv in 1:10) {
   print(paste("CV fold", cv))
   print(paste("ACCURACY for NB:", accuracies.iris.nb[cv]))
   print(paste("ACCURACY for Jags:", accuracies.iris.jags[cv]))
-}
+  }
 
 
 
@@ -120,7 +122,7 @@ set.seed(5) # Setting seed for reproducible results.
 ### Predictions Using Standard NB as Baseline:
 accuracies.letter.nb <- rep(0, 10)
 accuracies.letter.jags <- rep(0, 10)
-for (cv in 1:2) {
+for (cv in 1:10) {
   val.start.ind <- (cv-1)*100 + 1
   Y.letter.recognition.test <- Y.letter.recognition[val.start.ind:(val.start.ind+99)]
   X.letter.recognition.test <- X.letter.recognition[val.start.ind:(val.start.ind+99), ]
@@ -147,15 +149,17 @@ for (cv in 1:2) {
   model_string = textConnection("model{
     # Likelihood
     for (i in 1:n) {
-      Y[i] ~ dcat(pi[i,])
+      Y[i] ~ dcat(q[i,])
       for (j in 1:3) {
+        q[i,j] ~ dbeta(r*pi[i,j], r*(1-pi[i,j])) T(0.001, 0.999)
         logit(pi[i,j]) <- alpha[j] + inprod(beta[j,], X[i,])
       }
     }
     # Prediction
     for (i in 1:n_pred) {
-      Y_pred[i] ~ dcat(pi_pred[i,])
+      Y_pred[i] ~ dcat(q_pred[i,])
       for (j in 1:3) {
+        q_pred[i,j] ~ dbeta(r*pi_pred[i,j], r*(1-pi_pred[i,j])) T(0.001, 0.999)
         logit(pi_pred[i,j]) <- alpha[j] + inprod(beta[j,], X_pred[i,])
       }
     }
@@ -171,7 +175,7 @@ for (cv in 1:2) {
     #mub ~ dnorm(0, 0.001)
     taua ~ dgamma(0.1, 0.1)
     taub ~ dgamma(0.1, 0.1)
-    }")
+}")
   
   model <- jags.model(model_string, data=data, n.chains=n.chains, quiet=T)
   update(model, burn)
